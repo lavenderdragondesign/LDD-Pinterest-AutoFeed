@@ -1,20 +1,27 @@
+
 name: Update Pinterest RSS
+
 on:
   workflow_dispatch:
   schedule:
     - cron: '*/15 * * * *'
+
 permissions:
   contents: write
+
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
       - name: Generate RSS from live MyDesigns feed
         run: python generate_feed.py
+
       - name: Publish to gh-pages branch
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -26,6 +33,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -b gh-pages
           git add .
-          git commit -m "Update DramaHusky Pinterest RSS"
+          git commit -m "Update Pinterest RSS"
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git push --force origin gh-pages
+
