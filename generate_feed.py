@@ -13,9 +13,11 @@ from html import escape, unescape
 from html.parser import HTMLParser
 from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
 
-SOURCE = os.getenv('PRODUCT_FEED_URL', 'https://lddstores.com/meta-feed.csv')
+SOURCE = os.getenv('PRODUCT_FEED_URL', 'https://dramahusky.mdstore.io/meta-feed.csv')
+PUBLIC_DOMAIN = os.getenv('PUBLIC_STORE_DOMAIN', 'lddstores.com')
+FALLBACK_SOURCE = os.getenv('FALLBACK_PRODUCT_FEED_URL', 'https://lddstores.com/meta-feed.csv')
 OUT = os.getenv('OUTPUT_FILE', 'site/dramahusky.xml')
-ALLOWED_DOMAINS = set(os.getenv('STORE_DOMAINS', 'lddstores.com').split(','))
+ALLOWED_DOMAINS = set(os.getenv('STORE_DOMAINS', 'lddstores.com,dramahusky.mdstore.io').split(','))
 OVERRIDES_FILE = os.getenv('PRIMARY_IMAGES_FILE', 'primary_images.json')
 
 class MetadataParser(HTMLParser):
@@ -37,7 +39,7 @@ def clean_url(url):
     if p.scheme != 'https' or p.hostname not in ALLOWED_DOMAINS:
         return ''
     qs = [(k, v) for k, v in parse_qsl(p.query) if k.lower() not in {'variant', 'utm_source', 'utm_medium', 'utm_campaign'}]
-    return urlunsplit((p.scheme, p.netloc, p.path, urlencode(qs), ''))
+    return urlunsplit((p.scheme, PUBLIC_DOMAIN, p.path, urlencode(qs), ''))
 
 def fetch(url):
     req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (compatible; LDD-Pinterest-AutoFeed/2.0)'})
@@ -46,7 +48,12 @@ def fetch(url):
 
 def primary_image(product_url):
     parser = MetadataParser()
-    parser.feed(fetch(product_url).decode('utf-8', 'replace'))
+    try:
+        page = fetch(product_url)
+    except Exception:
+        p = urlsplit(product_url)
+        page = fetch(urlunsplit((p.scheme, 'dramahusky.mdstore.io', p.path, p.query, '')))
+    parser.feed(page.decode('utf-8', 'replace'))
     for kind in ('og:image:secure_url', 'og:image', 'twitter:image'):
         for key, url in parser.images:
             if key == kind:
@@ -57,7 +64,13 @@ def cdata(value):
     return '<![CDATA[' + str(value or '').replace(']]>', ']]]]><![CDATA[>') + ']]>'
 
 def generate():
-    rows = list(csv.DictReader(io.StringIO(fetch(SOURCE).decode('utf-8-sig'))))
+    try:
+        data = fetch(SOURCE)
+        print(f'Primary source: {SOURCE}')
+    except Exception as exc:
+        print(f'WARN: primary source unavailable ({exc}); trying fallback {FALLBACK_SOURCE}')
+        data = fetch(FALLBACK_SOURCE)
+    rows = list(csv.DictReader(io.StringIO(data.decode('utf-8-sig'))))
     if not rows:
         raise RuntimeError('CSV empty: existing RSS will not be overwritten')
     overrides = {}
@@ -98,7 +111,7 @@ def generate():
     parts = ['<?xml version="1.0" encoding="UTF-8"?>',
              '<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">',
              '<channel>', '<title>DramaHusky | Funny Husky Shirts</title>',
-             '<link>https://lddstores.com/</link>',
+             f'<link>https://{PUBLIC_DOMAIN}/</link>',
              '<description>Funny Siberian Husky apparel and gifts from DramaHusky.</description>',
              '<language>en-us</language>']
     for key, title, description, url, img in entries:
