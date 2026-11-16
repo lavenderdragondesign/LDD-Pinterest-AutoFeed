@@ -130,14 +130,23 @@ def load_previous_feed():
     """
     previous = {}
     try:
-        data = fetch(PREVIOUS_FEED_URL, timeout=30)
+        local_previous = os.getenv('PREVIOUS_FEED_FILE', 'site/dramahusky.xml')
+        if os.path.isfile(local_previous):
+            with open(local_previous, 'rb') as f:
+                data = f.read()
+        else:
+            data = fetch(PREVIOUS_FEED_URL, timeout=30)
     except Exception as exc:
         print(f'WARN: could not load previous feed ({exc}); all items get a fresh pubDate')
+        if os.getenv('REQUIRE_PREVIOUS_FEED') == '1':
+            raise RuntimeError('Previous feed unavailable; refusing to reset product dates') from exc
         return previous
     try:
         root = ET.fromstring(data)
     except Exception as exc:
         print(f'WARN: previous feed did not parse ({exc}); all items get a fresh pubDate')
+        if os.getenv('REQUIRE_PREVIOUS_FEED') == '1':
+            raise RuntimeError('Previous feed invalid; refusing to reset product dates') from exc
         return previous
     for item in root.iter('item'):
         guid = (item.findtext('guid') or '').strip()
@@ -239,6 +248,17 @@ def generate():
     tmp = OUT + '.tmp'
     with open(tmp, 'w', encoding='utf-8') as f:
         f.write('\n'.join(parts))
+    # Do not republish the feed if its product entries have not changed.
+    # lastBuildDate is metadata, not a new product event.
+    if os.path.isfile(OUT):
+        with open(OUT, encoding='utf-8') as old_file:
+            old_xml = old_file.read()
+        old_normalized = re.sub(r'<lastBuildDate>.*?</lastBuildDate>', '', old_xml)
+        new_normalized = re.sub(r'<lastBuildDate>.*?</lastBuildDate>', '', '\n'.join(parts))
+        if old_normalized == new_normalized:
+            os.remove(tmp)
+            print('No product changes; preserving existing feed byte-for-byte')
+            return
     os.replace(tmp, OUT)
     print(f'Created {OUT}: {len(entries)} items from {len(rows)} variants at {now}')
 
