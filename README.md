@@ -1,6 +1,6 @@
 # LDD Pinterest AutoFeed
 
-Converts the public MyDesigns product CSV at `https://lddstores.com/meta-feed.csv` into a Pinterest-style RSS 2.0 feed. One item per `item_group_id`, not one per size/color. Only in-stock products are included. Runs daily and can run manually.
+Converts the public MyDesigns product CSV at `https://dramahusky.com/meta-feed.csv` into a Pinterest-style RSS 2.0 feed. One item per `item_group_id`, not one per size/color. Only in-stock products are included. Runs daily and can run manually.
 
 ## Setup
 1. Create a **public** GitHub repository named `LDD-Pinterest-AutoFeed` under `lavenderdragondesign`.
@@ -12,7 +12,7 @@ Converts the public MyDesigns product CSV at `https://lddstores.com/meta-feed.cs
    `https://lavenderdragondesign.github.io/LDD-Pinterest-AutoFeed/dramahusky.xml`
 
 ## Important Pinterest caveat
-Pinterest may require the RSS feed's site and product-link domain to meet its claimed-website rules. A feed hosted on github.io with product links to claimed `lddstores.com` is **not guaranteed to be accepted**. Test it in Pinterest before relying on automation. If rejected, we will need an RSS URL hosted under the claimed domain or another supported publishing route.
+Pinterest may require the RSS feed's site and product-link domain to meet its claimed-website rules. A feed hosted on github.io with product links to claimed `dramahusky.com` is **not guaranteed to be accepted**. Test it in Pinterest before relying on automation. If rejected, we will need an RSS URL hosted under the claimed domain or another supported publishing route.
 
 ## Notes
 - GitHub Pages is public; all products are already public storefront data.
